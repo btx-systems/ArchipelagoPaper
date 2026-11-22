@@ -1,3 +1,8 @@
+import io.papermc.paperweight.tasks.CreateBundlerJar
+import io.papermc.paperweight.tasks.GenerateDevBundle
+import java.nio.file.FileSystems
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
@@ -47,7 +52,39 @@ val githubRepository = providers.gradleProperty("githubRepository")
     .map { it.lowercase() } // GitHub Packages rejects uppercase owners
     .orNull
 
+// Path in each archive -> file. Not META-INF/LICENSE, that is Mojang's in the server jar.
+val licenseFiles = listOf("LICENSE", "NOTICE.md", "licenses/MIT.md")
+    .associate { "META-INF/licenses/archipelago-paper/$it" to file(it) }
+
+// For paperweight's archive tasks, which aren't Jar tasks and can't take extra files
+class AddFilesToArchive(private val archive: Provider<RegularFile>, private val files: Map<String, File>) : Action<Task> {
+    override fun execute(task: Task) {
+        FileSystems.newFileSystem(archive.get().asFile.toPath()).use { zip ->
+            for ((path, file) in files) {
+                val target = zip.getPath(path)
+                Files.createDirectories(target.parent)
+                Files.copy(file.toPath(), target, StandardCopyOption.REPLACE_EXISTING)
+            }
+        }
+    }
+}
+
 subprojects {
+    tasks.withType<Jar>().configureEach {
+        for ((path, file) in licenseFiles) {
+            from(file) { into(path.substringBeforeLast('/')) }
+        }
+    }
+    // The Paperclip jar copies these from the bundler jar
+    tasks.withType<CreateBundlerJar>().configureEach {
+        inputs.files(licenseFiles.values).withPropertyName("licenseFiles").withPathSensitivity(PathSensitivity.RELATIVE)
+        doLast(AddFilesToArchive(outputZip, licenseFiles))
+    }
+    tasks.withType<GenerateDevBundle>().configureEach {
+        inputs.files(licenseFiles.values).withPropertyName("licenseFiles").withPathSensitivity(PathSensitivity.RELATIVE)
+        doLast(AddFilesToArchive(devBundleFile, licenseFiles))
+    }
+
     tasks.withType<JavaCompile>().configureEach {
         options.encoding = Charsets.UTF_8.name()
         options.release = 25

@@ -16,6 +16,10 @@ remain under that license.
 
 ## Source code
 
-The source of a build is this repository at the commit shown by `/version`, applied to the Paper commit set as
-`paperRef` in [gradle.properties](gradle.properties) at that commit. `./gradlew applyAllPatches` recreates the
-full source tree.
+The source is at <https://github.com/btx-systems/ArchipelagoPaper>. For a server jar, use the commit shown by
+`/version`. For the API and dev bundle, use the commit of the
+[Build and Publish run](https://github.com/btx-systems/ArchipelagoPaper/actions/workflows/build.yml)
+with the same number as the build in the version.
+
+`./gradlew applyAllPatches` at that commit recreates the full source tree, using the Paper commit set as
+`paperRef` in its `gradle.properties`.
