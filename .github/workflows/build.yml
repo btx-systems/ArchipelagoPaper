@@ -1,28 +1,91 @@
-name: Patch and Build
+name: Build and Publish
 
 on:
   push:
     branches: [ "**" ]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Used in the version, e.g. 26.3.build.12-stable. Renaming this file resets the number.
+  BUILD_NUMBER: ${{ github.run_number }}
 
 jobs:
   build:
+    name: Build
     # Only run on PRs if the source branch is on someone else's repo
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout Git Repository
-        uses: actions/checkout@v4
-      - name: Set up JDK
-        uses: actions/setup-java@v4
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          persist-credentials: false
+      - name: Set up JDK
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '25'
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic # open source, the default 'enhanced' provider has commercial terms
       - name: Configure Git User Details
         run: git config --global user.email "actions@github.com" && git config --global user.name "Github Actions"
       - name: Apply Patches
         run: ./gradlew applyAllPatches --stacktrace
+      - name: Set Build Time
+        run: echo "BUILD_STARTED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_ENV"
       - name: Build
-        run: ./gradlew build
+        run: ./gradlew build :archipelago-server:createPaperclipJar --stacktrace
+      - name: Upload Paperclip Jar
+        id: upload
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          path: archipelago-server/build/libs/archipelago-paperclip-*.jar
+          archive: false # download the jar itself rather than a zip of it
+          if-no-files-found: error
+          overwrite: true
+      - name: Link Jar in Summary
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: echo "[Download the Archipelago Paper server jar]($ARTIFACT_URL)" >> "$GITHUB_STEP_SUMMARY"
+
+  # Separate job so that only code on the default branch gets a token that can write packages
+  publish:
+    name: Publish to GitHub Packages
+    needs: build
+    if: ${{ github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout Git Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up JDK
+        uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
+        with:
+          cache-provider: basic
+      - name: Configure Git User Details
+        run: git config --global user.email "actions@github.com" && git config --global user.name "Github Actions"
+      - name: Apply Patches
+        run: ./gradlew applyAllPatches --stacktrace
+      # Package versions can't be overwritten. To publish again, start a new run instead of re-running this one.
+      - name: Publish API and Dev Bundle
+        run: ./gradlew publishAllPublicationsToGithubPackagesRepository -PpublishDevBundle --stacktrace
+        env:
+          ORG_GRADLE_PROJECT_githubPackagesUsername: ${{ github.actor }}
+          ORG_GRADLE_PROJECT_githubPackagesPassword: ${{ secrets.GITHUB_TOKEN }}

@@ -2,7 +2,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 
 plugins {
-    id("io.papermc.paperweight.patcher") version "2.0.0-beta.21"
+    id("io.papermc.paperweight.patcher") version "2.0.0-beta.24"
 }
 
 paperweight {
@@ -11,18 +11,18 @@ paperweight {
 
         patchFile {
             path = "paper-server/build.gradle.kts"
-            outputFile = file("fork-server/build.gradle.kts")
-            patchFile = file("fork-server/build.gradle.kts.patch")
+            outputFile = file("archipelago-server/build.gradle.kts")
+            patchFile = file("archipelago-server/build.gradle.kts.patch")
         }
         patchFile {
             path = "paper-api/build.gradle.kts"
-            outputFile = file("fork-api/build.gradle.kts")
-            patchFile = file("fork-api/build.gradle.kts.patch")
+            outputFile = file("archipelago-api/build.gradle.kts")
+            patchFile = file("archipelago-api/build.gradle.kts.patch")
         }
         patchDir("paperApi") {
             upstreamPath = "paper-api"
             excludes = setOf("build.gradle.kts")
-            patchesDir = file("fork-api/paper-patches")
+            patchesDir = file("archipelago-api/paper-patches")
             outputDir = file("paper-api")
         }
     }
@@ -40,6 +40,12 @@ subprojects {
 }
 
 val paperMavenPublicUrl = "https://repo.papermc.io/repository/maven-public/"
+
+// "owner/repo" to publish to. GitHub Actions sets GITHUB_REPOSITORY, use -PgithubRepository=owner/repo elsewhere.
+val githubRepository = providers.gradleProperty("githubRepository")
+    .orElse(providers.environmentVariable("GITHUB_REPOSITORY"))
+    .map { it.lowercase() } // GitHub Packages rejects uppercase owners
+    .orNull
 
 subprojects {
     tasks.withType<JavaCompile>().configureEach {
@@ -69,9 +75,11 @@ subprojects {
 
     extensions.configure<PublishingExtension> {
         repositories {
-            maven("https://artifactory.papermc.io/artifactory/releases/") {
-                name = "paperReleases"
-                credentials(PasswordCredentials::class)
+            if (githubRepository != null) {
+                maven("https://maven.pkg.github.com/$githubRepository") {
+                    name = "githubPackages"
+                    credentials(PasswordCredentials::class) // githubPackagesUsername and githubPackagesPassword
+                }
             }
         }
     }

@@ -1,0 +1,19 @@
+--- a/src/main/java/io/papermc/paper/PaperServerInternalAPIBridge.java
++++ b/src/main/java/io/papermc/paper/PaperServerInternalAPIBridge.java
+@@ -1,7 +_,6 @@
+ package io.papermc.paper;
+ 
+ import com.destroystokyo.paper.PaperSkinParts;
+-import com.destroystokyo.paper.PaperVersionFetcher;
+ import com.destroystokyo.paper.SkinParts;
+ import com.destroystokyo.paper.util.VersionFetcher;
+ import com.google.common.base.Preconditions;
+@@ -203,7 +_,7 @@
+ 
+     @Override
+     public VersionFetcher getVersionFetcher() {
+-        return new PaperVersionFetcher();
++        return new sh.btx.archipelago.ArchipelagoVersionFetcher(); // Archipelago - branding
+     }
+ 
+     @Override

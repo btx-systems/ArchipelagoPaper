@@ -1,0 +1,35 @@
+--- a/src/main/java/io/papermc/paper/ServerBuildInfoImpl.java
++++ b/src/main/java/io/papermc/paper/ServerBuildInfoImpl.java
+@@ -30,7 +_,10 @@
+     private static final String ATTRIBUTE_GIT_BRANCH = "Git-Branch";
+     private static final String ATTRIBUTE_GIT_COMMIT = "Git-Commit";
+ 
+-    private static final String BRAND_PAPER_NAME = "Paper";
++    // Archipelago start - branding
++    private static final Key BRAND_ARCHIPELAGO_ID = Key.key("btx", "archipelago-paper");
++    private static final String BRAND_ARCHIPELAGO_NAME = "Archipelago Paper";
++    // Archipelago end - branding
+ 
+     private static final String BUILD_DEV = "DEV";
+ 
+@@ -42,9 +_,9 @@
+         this(
+             getManifestAttribute(manifest, ATTRIBUTE_BRAND_ID)
+                 .map(Key::key)
+-                .orElse(BRAND_PAPER_ID),
++                .orElse(BRAND_ARCHIPELAGO_ID), // Archipelago - branding
+             getManifestAttribute(manifest, ATTRIBUTE_BRAND_NAME)
+-                .orElse(BRAND_PAPER_NAME),
++                .orElse(BRAND_ARCHIPELAGO_NAME), // Archipelago - branding
+             SharedConstants.getCurrentVersion().id(),
+             SharedConstants.getCurrentVersion().name(),
+             getManifestAttribute(manifest, ATTRIBUTE_BUILD_NUMBER)
+@@ -61,7 +_,7 @@
+ 
+     @Override
+     public boolean isBrandCompatible(final @NotNull Key brandId) {
+-        return brandId.equals(this.brandId);
++        return brandId.equals(this.brandId) || brandId.equals(BRAND_PAPER_ID); // Archipelago - remain compatible with Paper plugins
+     }
+ 
+     @Override

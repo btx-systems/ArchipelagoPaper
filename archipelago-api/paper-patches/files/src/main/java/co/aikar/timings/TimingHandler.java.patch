@@ -1,0 +1,11 @@
+--- a/src/main/java/co/aikar/timings/TimingHandler.java
++++ b/src/main/java/co/aikar/timings/TimingHandler.java
+@@ -127,7 +_,7 @@
+         while ((last = TIMING_STACK.removeLast()) != this) {
+             last.timingDepth = 0;
+             if ("Minecraft".equalsIgnoreCase(last.identifier.group)) {
+-                Logger.getGlobal().log(Level.SEVERE, "TIMING_STACK_CORRUPTION - Look above this for any errors and report this to Paper unless it has a plugin in the stack trace (" + last.identifier + " did not stopTiming)");
++                Logger.getGlobal().log(Level.SEVERE, "TIMING_STACK_CORRUPTION - Look above this for any errors and report this to Archipelago Paper unless it has a plugin in the stack trace (" + last.identifier + " did not stopTiming)"); // Archipelago - branding
+             } else {
+                 Logger.getGlobal().log(Level.SEVERE, "TIMING_STACK_CORRUPTION - Report this to the plugin " + last.identifier.group + " (Look for errors above this in the logs) (" + last.identifier + " did not stopTiming)", new Throwable());
+             }
