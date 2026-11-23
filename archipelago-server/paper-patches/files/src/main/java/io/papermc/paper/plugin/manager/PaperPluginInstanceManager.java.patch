@@ -1,0 +1,11 @@
+--- a/src/main/java/io/papermc/paper/plugin/manager/PaperPluginInstanceManager.java
++++ b/src/main/java/io/papermc/paper/plugin/manager/PaperPluginInstanceManager.java
+@@ -243,7 +_,7 @@
+             FeatureHooks.flushAsyncAppenders();
+ 
+             ClassLoader classLoader = plugin.getClass().getClassLoader();
+-            if (classLoader instanceof ConfiguredPluginClassLoader configuredPluginClassLoader) {
++            if (classLoader instanceof ConfiguredPluginClassLoader configuredPluginClassLoader && !sh.btx.archipelago.storage.StorageHooks.inUse()) { // Archipelago - storage API; the last save of storages comes later
+                 try {
+                     configuredPluginClassLoader.close();
+                 } catch (IOException ex) {

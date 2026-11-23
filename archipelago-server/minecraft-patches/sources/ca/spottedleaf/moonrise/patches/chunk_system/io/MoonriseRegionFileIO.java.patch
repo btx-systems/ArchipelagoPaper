@@ -1,0 +1,81 @@
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java
+@@ -495,6 +_,7 @@
+ 
+         final boolean[] created = new boolean[1];
+         final ChunkIOTask.InProgressWrite write = new ChunkIOTask.InProgressWrite(writeTask);
++        write.notToBeStored = taskController.writeScheduled(chunkX, chunkZ); // Archipelago - storage API; before anything can run it
+         final ChunkIOTask task = taskController.chunkTasks.compute(CoordinateUtils.getChunkKey(chunkX, chunkZ),
+             (final long keyInMap, final ChunkIOTask taskRunning) -> {
+                 if (taskRunning == null || taskRunning.failedWrite) {
+@@ -1033,6 +_,12 @@
+         }
+ 
+         private void pushPendingWrite(final InProgressWrite write) {
++            // Archipelago start - storage API; only the last write runs, so one that isn't stored has to pass on the one before
++            final InProgressWrite previous = this.inProgressWrite;
++            if (write.notToBeStored && previous != null) {
++                write.storeFirst = previous.notToBeStored ? previous.storeFirst : previous;
++            }
++            // Archipelago end - storage API; only the last write runs, so one that isn't stored has to pass on the one before
+             this.inProgressWrite = write;
+             synchronized (this) {
+                 this.allPendingWrites.add(write);
+@@ -1208,7 +_,14 @@
+         }
+ 
+         public void scheduleWriteCompress() {
+-            final InProgressWrite inProgressWrite = this.inProgressWrite;
++            // Archipelago start - storage API; as it isn't the last, completing it goes on to write the last
++            final InProgressWrite latest = this.inProgressWrite;
++            final InProgressWrite storeFirst = latest.storeFirst;
++            if (storeFirst != null) {
++                latest.storeFirst = null;
++            }
++            final InProgressWrite inProgressWrite = storeFirst != null ? storeFirst : latest;
++            // Archipelago end - storage API; as it isn't the last, completing it goes on to write the last
+ 
+             final PrioritisedExecutor.PrioritisedTask task;
+             synchronized (this) {
+@@ -1260,9 +_,10 @@
+ 
+             if (inProgressWrite.throwable != null) {
+                 LOGGER.error("Serialization task for chunk data failed: " + this.toString(), inProgressWrite.throwable);
++                this.regionDataController.serializationFailed(this.chunkX, this.chunkZ, inProgressWrite.throwable); // Archipelago - storage API
+             } else {
+                 try {
+-                    writeData = this.regionDataController.startWrite(this.chunkX, this.chunkZ, inProgressWrite.value);
++                    writeData = this.regionDataController.startWrite(this.chunkX, this.chunkZ, inProgressWrite.value, inProgressWrite.notToBeStored); // Archipelago - storage API
+                 } catch (final Throwable thr) {
+                     failedWrite = thr instanceof IOException;
+                     LOGGER.error("Failed to write chunk data for task: " + this.toString(), thr);
+@@ -1437,6 +_,10 @@
+             private final MultiThreadedQueue<BiConsumer<CompoundTag, Throwable>> callbacks = new MultiThreadedQueue<>();
+ 
+             private final PrioritisedExecutor.PrioritisedTask writeTask;
++            // Archipelago start - storage API
++            private boolean notToBeStored;
++            private volatile InProgressWrite storeFirst; // the last write before this one that is to be stored
++            // Archipelago end - storage API
+ 
+             public InProgressWrite(final PrioritisedExecutor.PrioritisedTask writeTask) {
+                 this.writeTask = writeTask;
+@@ -1535,6 +_,18 @@
+         }
+ 
+         public abstract RegionFileStorage getCache();
++
++        // Archipelago start - storage API
++        public boolean writeScheduled(final int chunkX, final int chunkZ) {
++            return false;
++        }
++
++        public WriteData startWrite(final int chunkX, final int chunkZ, final CompoundTag compound, final boolean notToBeStored) throws IOException {
++            return this.startWrite(chunkX, chunkZ, compound);
++        }
++
++        public void serializationFailed(final int chunkX, final int chunkZ, final Throwable throwable) {}
++        // Archipelago end - storage API
+ 
+         public static record WriteData(CompoundTag input, WriteResult result, DataOutputStream output, IORunnable write) {
+             public static enum WriteResult {

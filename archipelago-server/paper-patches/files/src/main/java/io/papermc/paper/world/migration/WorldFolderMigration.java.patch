@@ -1,0 +1,18 @@
+--- a/src/main/java/io/papermc/paper/world/migration/WorldFolderMigration.java
++++ b/src/main/java/io/papermc/paper/world/migration/WorldFolderMigration.java
+@@ -44,6 +_,7 @@
+         final ResourceKey<LevelStem> stemKey,
+         final ResourceKey<Level> dimensionKey
+     ) throws IOException {
++        if (sh.btx.archipelago.storage.StorageHooks.isStored(dimensionKey)) return; // Archipelago - storage API; nothing to migrate, and the folder is not this world's
+         final WorldMigrationContext context = new WorldMigrationContext(rootAccess, registryAccess, worldName, stemKey, dimensionKey);
+         final MigrationMode mode = classifyStartupMigration(context);
+         if (mode != MigrationMode.NO_OP) {
+@@ -63,6 +_,7 @@
+         final ResourceKey<LevelStem> stemKey,
+         final ResourceKey<Level> dimensionKey
+     ) throws IOException {
++        if (sh.btx.archipelago.storage.StorageHooks.isStored(dimensionKey)) return; // Archipelago - storage API; nothing to migrate, and the folder is not this world's
+         LegacyCraftBukkitWorldMigration.migrateApiWorld(new WorldMigrationContext(rootAccess, registryAccess, worldName, stemKey, dimensionKey));
+     }
+ 

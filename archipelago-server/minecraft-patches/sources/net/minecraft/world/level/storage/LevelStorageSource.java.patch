@@ -1,0 +1,33 @@
+--- a/net/minecraft/world/level/storage/LevelStorageSource.java
++++ b/net/minecraft/world/level/storage/LevelStorageSource.java
+@@ -178,7 +_,7 @@
+                 error -> {
+                     // Paper start - Regenerate missing overworld world gen settings
+                     Path dataLocation = WorldGenSettings.TYPE.id().withSuffix(".dat").resolveAgainst(worldAccess.getDimensionPath(dimension).resolve(LevelResource.DATA.id()));
+-                    if (!Files.notExists(dataLocation, java.nio.file.LinkOption.NOFOLLOW_LINKS)) {
++                    if (!sh.btx.archipelago.storage.StorageHooks.isStored(dimension) && !Files.notExists(dataLocation, java.nio.file.LinkOption.NOFOLLOW_LINKS)) { // Archipelago - storage API; errors are only for absent data with storage
+                         throw new IllegalStateException("Unable to read or access the world gen settings file " + dataLocation + ". " + error.message());
+                     }
+                     LOGGER.warn(
+@@ -199,6 +_,12 @@
+     public static <T extends SavedData> DataResult<T> readExistingSavedData(
+         final LevelStorageSource.LevelStorageAccess access, final ResourceKey<Level> dimension, final HolderLookup.Provider registryAccess, final SavedDataType<T> savedDataType // Paper - pass dimension
+     ) {
++        // Archipelago start - storage API
++        final sh.btx.archipelago.storage.StoredWorld storedWorld = sh.btx.archipelago.storage.StorageHooks.world(dimension);
++        if (storedWorld != null) {
++            return sh.btx.archipelago.storage.StorageHooks.readExistingSavedData(storedWorld, savedDataType, registryAccess);
++        }
++        // Archipelago end - storage API
+         Path dataLocation = savedDataType.id().withSuffix(".dat").resolveAgainst(access.getDimensionPath(dimension).resolve(LevelResource.DATA.id())); // Paper - use dimension scoped data (we 'demote' some data from global and add our own dimension scoped data)
+ 
+         CompoundTag fileContents;
+@@ -556,7 +_,7 @@
+ 
+         public PlayerDataStorage createPlayerStorage() {
+             this.checkLock();
+-            return new PlayerDataStorage(this, LevelStorageSource.this.fixerUpper);
++            return sh.btx.archipelago.storage.StorageHooks.createPlayerDataStorage(this, LevelStorageSource.this.fixerUpper); // Archipelago - storage API
+         }
+ 
+         public void collectIssues(final boolean useFallback) throws IOException {

@@ -1,0 +1,81 @@
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
+@@ -328,9 +_,11 @@
+         }
+ 
+         @Override
+-        protected TaskResult<ReadChunk, Throwable> runOffMain(final CompoundTag data, final Throwable throwable) {
++        protected TaskResult<ReadChunk, Throwable> runOffMain(CompoundTag data, final Throwable throwable) {
++            data = sh.btx.archipelago.storage.StorageHooks.loadable(this.world, MoonriseRegionFileIO.RegionFileType.CHUNK_DATA, this.chunkX, this.chunkZ, data); // Archipelago - storage API
+             if (throwable != null) {
+                 LOGGER.error("Failed to load chunk data for task: " + this.toString() + ", chunk data will be lost", throwable);
++                sh.btx.archipelago.storage.StorageHooks.loadFailed(this.world, MoonriseRegionFileIO.RegionFileType.CHUNK_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
+                 return new TaskResult<>(null, null);
+             }
+ 
+@@ -341,6 +_,7 @@
+             try {
+                 // run converters
+                 final CompoundTag converted = this.world.getChunkSource().chunkMap.upgradeChunkTag(data);
++                sh.btx.archipelago.storage.StorageHooks.validateChunk(this.world, converted); // Archipelago - storage API; an unknown status would load as an empty chunk
+ 
+                 // unpack the data
+                 final SerializableChunkData chunkData = SerializableChunkData.parse(
+@@ -349,6 +_,7 @@
+ 
+                 if (chunkData == null) {
+                     LOGGER.error("Deserialized chunk for task: " + this.toString() + " produced null, chunk data will be lost?");
++                    sh.btx.archipelago.storage.StorageHooks.loadFailed(this.world, MoonriseRegionFileIO.RegionFileType.CHUNK_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
+                 }
+ 
+                 // read into ProtoChunk
+@@ -360,6 +_,7 @@
+                 return new TaskResult<>(new ReadChunk(chunk, chunkData), null);
+             } catch (final Throwable thr2) {
+                 LOGGER.error("Failed to parse chunk data for task: " + this.toString() + ", chunk data will be lost", thr2);
++                sh.btx.archipelago.storage.StorageHooks.loadFailed(this.world, MoonriseRegionFileIO.RegionFileType.CHUNK_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
+                 return new TaskResult<>(null, null);
+             }
+         }
+@@ -405,9 +_,11 @@
+         }
+ 
+         @Override
+-        protected TaskResult<PoiChunk, Throwable> runOffMain(final CompoundTag data, final Throwable throwable) {
++        protected TaskResult<PoiChunk, Throwable> runOffMain(CompoundTag data, final Throwable throwable) {
++            data = sh.btx.archipelago.storage.StorageHooks.loadable(this.world, MoonriseRegionFileIO.RegionFileType.POI_DATA, this.chunkX, this.chunkZ, data); // Archipelago - storage API
+             if (throwable != null) {
+                 LOGGER.error("Failed to load poi data for task: " + this.toString() + ", poi data will be lost", throwable);
++                sh.btx.archipelago.storage.StorageHooks.loadFailed(this.world, MoonriseRegionFileIO.RegionFileType.POI_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
+                 return new TaskResult<>(PoiChunk.empty(this.world, this.chunkX, this.chunkZ), null);
+             }
+ 
+@@ -424,6 +_,7 @@
+                 return new TaskResult<>(PoiChunk.parse(this.world, this.chunkX, this.chunkZ, converted), null);
+             } catch (final Throwable thr2) {
+                 LOGGER.error("Failed to run parse poi data for task: " + this.toString() + ", poi data will be lost", thr2);
++                sh.btx.archipelago.storage.StorageHooks.loadFailed(this.world, MoonriseRegionFileIO.RegionFileType.POI_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
+                 return new TaskResult<>(PoiChunk.empty(this.world, this.chunkX, this.chunkZ), null);
+             }
+         }
+@@ -467,9 +_,11 @@
+         }
+ 
+         @Override
+-        protected TaskResult<CompoundTag, Throwable> runOffMain(final CompoundTag data, final Throwable throwable) {
++        protected TaskResult<CompoundTag, Throwable> runOffMain(CompoundTag data, final Throwable throwable) {
++            data = sh.btx.archipelago.storage.StorageHooks.loadable(this.world, MoonriseRegionFileIO.RegionFileType.ENTITY_DATA, this.chunkX, this.chunkZ, data); // Archipelago - storage API
+             if (throwable != null) {
+                 LOGGER.error("Failed to load entity data for task: " + this.toString() + ", entity data will be lost", throwable);
++                sh.btx.archipelago.storage.StorageHooks.loadFailed(this.world, MoonriseRegionFileIO.RegionFileType.ENTITY_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
+                 return new TaskResult<>(null, null);
+             }
+ 
+@@ -482,6 +_,7 @@
+                 return new TaskResult<>(ChunkSystemConverters.convertEntityChunkCompoundTag(data, this.world), null);
+             } catch (final Throwable thr2) {
+                 LOGGER.error("Failed to run converters for entity data for task: " + this.toString() + ", entity data will be lost", thr2);
++                sh.btx.archipelago.storage.StorageHooks.loadFailed(this.world, MoonriseRegionFileIO.RegionFileType.ENTITY_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
+                 return new TaskResult<>(null, thr2);
+             }
+         }

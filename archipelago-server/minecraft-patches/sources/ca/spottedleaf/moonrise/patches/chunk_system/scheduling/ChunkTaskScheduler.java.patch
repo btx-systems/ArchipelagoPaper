@@ -1,0 +1,11 @@
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
+@@ -277,7 +_,7 @@
+         this.parallelGenExecutor = MoonriseCommon.SERVER_GROUP.createExecutor();
+         this.loadExecutor = MoonriseCommon.SERVER_GROUP.createExecutor();
+         this.radiusAwareScheduler = new AreaDependentQueue(this.parallelGenExecutor, 4); // 4 -> 16x16 grid
+-        this.ioExecutor = MoonriseCommon.SERVER_IO_GROUP.createExecutor();
++        this.ioExecutor = sh.btx.archipelago.storage.StorageHooks.ioExecutor(world); // Archipelago - storage API
+         // we need a separate executor here so that on shutdown we can continue to process I/O tasks
+         this.compressionExecutor = MoonriseCommon.SERVER_GROUP.createExecutor();
+         this.saveExecutor = MoonriseCommon.SERVER_GROUP.createExecutor();

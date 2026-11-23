@@ -1,5 +1,31 @@
 --- a/net/minecraft/server/MinecraftServer.java
 +++ b/net/minecraft/server/MinecraftServer.java
+@@ -662,7 +_,7 @@
+     ) {
+         final WorldOptions worldOptions = worldDataAndGenSettings.genSettings().options();
+         final ResourceKey<Level> dimensionKey = loading.info().dimensionKey();
+-        final SavedDataStorage savedDataStorage = new SavedDataStorage(this.storageSource.getDimensionPath(dimensionKey).resolve(LevelResource.DATA.id()), this.getFixerUpper(), this.registryAccess());
++        final SavedDataStorage savedDataStorage = sh.btx.archipelago.storage.StorageHooks.savedData(dimensionKey, this.storageSource.getDimensionPath(dimensionKey).resolve(LevelResource.DATA.id()), this.getFixerUpper(), this.registryAccess()); // Archipelago - storage API
+         savedDataStorage.set(WorldGenSettings.TYPE, new WorldGenSettings(worldDataAndGenSettings.genSettings().options(), worldDataAndGenSettings.genSettings().dimensions()));
+         long seed = worldOptions.seed();
+         long biomeZoomSeed = BiomeManager.obfuscateSeed(seed);
+@@ -949,6 +_,8 @@
+     public void saveGlobalData(final boolean flush) {
+         this.scoreboard.storeToSaveDataIfDirty(this.getDataStorage().computeIfAbsent(ScoreboardSaveData.TYPE));
+         // Paper end - split out global level data
++        sh.btx.archipelago.storage.StorageHooks.retryPlayerSaves(); // Archipelago - storage API
++        sh.btx.archipelago.storage.StorageHooks.saveMaps(flush); // Archipelago - storage API
+         GameProfile singleplayerProfile = this.getSingleplayerProfile();
+         this.storageSource.saveDataTag(this.worldData, singleplayerProfile == null ? null : singleplayerProfile.id());
+         if (flush) {
+@@ -1048,6 +_,7 @@
+         // Paper end - rewrite chunk system
+ 
+         this.saveAllChunks(false, true, false, true); // Paper - rewrite chunk system
++        sh.btx.archipelago.storage.StorageHooks.shutdown(); // Archipelago - storage API; after the last save of players and worlds
+ 
+         this.isSaving = false;
+         this.savedDataStorage.close();
 @@ -1280,11 +_,7 @@
                  LOGGER.info("*************************************************************************************");
              }
@@ -13,3 +39,11 @@
  
              while (this.running) {
                  final long tickStart = System.nanoTime(); // Paper - improve tick loop
+@@ -1899,6 +_,7 @@
+         Map<ResourceKey<Level>, ServerLevel> newLevels = Maps.newLinkedHashMap(oldLevels);
+         newLevels.put(level.dimension(), level);
+         this.levels = Collections.unmodifiableMap(newLevels);
++        sh.btx.archipelago.storage.StorageHooks.worldLoaded(level); // Archipelago - storage API; it may come from another server, with newer maps
+     }
+ 
+     public void removeLevel(ServerLevel level) {

@@ -1,0 +1,43 @@
+--- a/net/minecraft/server/Main.java
++++ b/net/minecraft/server/Main.java
+@@ -222,6 +_,10 @@
+                 levelDataTag = null;
+             }
+             io.papermc.paper.world.migration.WorldFolderMigration.didInitialLoad = true; // Paper
++            // Archipelago start - storage API
++            sh.btx.archipelago.storage.StorageHooks.initialize(access);
++            sh.btx.archipelago.storage.StorageHooks.openDefaultWorld(access, net.minecraft.world.level.Level.OVERWORLD); // its gen settings are needed to load registries
++            // Archipelago end - storage API
+ 
+             boolean safeModeEnabled = options.has("safeMode"); // CraftBukkit
+             if (safeModeEnabled) {
+@@ -289,6 +_,7 @@
+                 LOGGER.warn(
+                     "Failed to load datapacks, can't proceed with server load. You can either fix your datapacks or reset to vanilla with --safeMode", e
+                 );
++                sh.btx.archipelago.storage.StorageHooks.abort(); // Archipelago - storage API
+                 return;
+             }
+ 
+@@ -359,6 +_,7 @@
+             */ // CraftBukkit end
+         } catch (Throwable t) {
+             LOGGER.error(LogUtils.FATAL_MARKER, "Failed to start the minecraft server", t);
++            sh.btx.archipelago.storage.StorageHooks.abort(); // Archipelago - storage API
+         }
+     }
+ 
+@@ -388,6 +_,13 @@
+             worldOptions = bonusChest ? properties.worldOptions.withBonusChest(true) : properties.worldOptions;
+             dimensions = properties.createDimensions(context.datapackWorldRegistries());
+         }
++        // Archipelago start - storage API; a stored world outlives level.dat
++        final WorldGenSettings storedGenSettings = sh.btx.archipelago.storage.StorageHooks.overworldGenSettings(context.datapackWorldRegistries());
++        if (storedGenSettings != null) {
++            worldOptions = storedGenSettings.options();
++            dimensions = storedGenSettings.dimensions();
++        }
++        // Archipelago end - storage API; a stored world outlives level.dat
+ 
+         WorldDimensions.Complete finalDimensions = dimensions.bake(datapackDimensions);
+         Lifecycle lifecycle = finalDimensions.lifecycle().add(context.datapackWorldRegistries().allRegistriesLifecycle());

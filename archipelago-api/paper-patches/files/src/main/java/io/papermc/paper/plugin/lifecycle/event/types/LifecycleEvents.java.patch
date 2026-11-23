@@ -1,0 +1,19 @@
+--- a/src/main/java/io/papermc/paper/plugin/lifecycle/event/types/LifecycleEvents.java
++++ b/src/main/java/io/papermc/paper/plugin/lifecycle/event/types/LifecycleEvents.java
+@@ -41,6 +_,16 @@
+     @ApiStatus.Experimental
+     public static final LifecycleEventType.Prioritizable<BootstrapContext, RegistrarEvent<DatapackRegistrar>> DATAPACK_DISCOVERY = bootstrapPrioritized("datapack_discovery");
+ 
++    // Archipelago start - storage API
++    /**
++     * This event is for replacing where the default worlds, players and maps are stored. It is called once, before any of them is read.
++     * You can register a handler for this event only in {@link io.papermc.paper.plugin.bootstrap.PluginBootstrap#bootstrap(BootstrapContext)}.
++     * @see sh.btx.archipelago.storage.StorageRegistrar
++     */
++    @ApiStatus.Experimental
++    public static final LifecycleEventType.Prioritizable<BootstrapContext, RegistrarEvent<sh.btx.archipelago.storage.StorageRegistrar>> STORAGE = bootstrapPrioritized("storage");
++    // Archipelago end - storage API
++
+     //<editor-fold desc="helper methods" defaultstate="collapsed">
+     @ApiStatus.Internal
+     static <E extends LifecycleEvent> LifecycleEventType.Monitorable<Plugin, E> plugin(final String name) {

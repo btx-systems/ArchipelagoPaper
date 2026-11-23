@@ -1,0 +1,36 @@
+--- a/src/main/java/io/papermc/paper/world/PaperWorldLoader.java
++++ b/src/main/java/io/papermc/paper/world/PaperWorldLoader.java
+@@ -58,6 +_,7 @@
+         }
+ 
+         final String defaultName = defaultWorldName(this.levelId, info.stemKey());
++        sh.btx.archipelago.storage.StorageHooks.openDefaultWorld(this.server.storageSource, info.dimensionKey()); // Archipelago - storage API
+ 
+         try {
+             WorldFolderMigration.migrateStartupWorld(this.server.storageSource, this.server.registryAccess(), defaultName, info.stemKey(), info.dimensionKey());
+@@ -102,7 +_,7 @@
+         final var storageSource = server.storageSource;
+         final var registryAccess = server.registryAccess();
+ 
+-        final SavedDataStorage tempStorage = new SavedDataStorage(storageSource.getDimensionPath(dimension).resolve(LevelResource.DATA.id()), DataFixers.getDataFixer(), registryAccess);
++        final SavedDataStorage tempStorage = sh.btx.archipelago.storage.StorageHooks.savedData(dimension, storageSource.getDimensionPath(dimension).resolve(LevelResource.DATA.id()), DataFixers.getDataFixer(), registryAccess); // Archipelago - storage API
+         final PaperWorldMetadata metadata = tempStorage.get(PaperWorldMetadata.TYPE);
+         final PaperWorldPDC pdc = tempStorage.get(PaperWorldPDC.TYPE);
+         final PaperLevelOverrides levelOverrides = tempStorage.get(PaperLevelOverrides.TYPE);
+@@ -114,6 +_,7 @@
+             levelOverrides == null ? PaperLevelOverrides.createFromLiveLevelData((PrimaryLevelData) server.getWorldData()) : levelOverrides
+         );
+ 
++        sh.btx.archipelago.storage.StorageHooks.checkUniqueId(server, dimension, data.uuid()); // Archipelago - storage API
+         data.levelOverrides().attach((PrimaryLevelData) server.getWorldData(), dimension);
+ 
+         return data;
+@@ -146,7 +_,7 @@
+ 
+         final boolean isOverworldLevel = loading.info().dimensionKey() == Level.OVERWORLD;
+ 
+-        final WorldGenSettings worldGenSettings = isOverworldLevel || !hasWorldData
++        final WorldGenSettings worldGenSettings = isOverworldLevel || !sh.btx.archipelago.storage.StorageHooks.hasWorldData(loading.info().dimensionKey(), hasWorldData) // Archipelago - storage API
+             ? this.server.getWorldGenSettings()
+             : loadWorldGenSettings(
+             this.server.storageSource,

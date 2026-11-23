@@ -1,0 +1,105 @@
+--- a/net/minecraft/server/level/ServerLevel.java
++++ b/net/minecraft/server/level/ServerLevel.java
+@@ -316,9 +_,9 @@
+     // Paper start - rewrite chunk system
+     private final ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader.ViewDistanceHolder viewDistanceHolder = new ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader.ViewDistanceHolder();
+     private final ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader chunkLoader = new ca.spottedleaf.moonrise.patches.chunk_system.player.RegionizedPlayerChunkLoader((ServerLevel)(Object)this);
+-    private final ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.EntityDataController entityDataController;
+-    private final ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.PoiDataController poiDataController;
+-    private final ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.ChunkDataController chunkDataController;
++    private final ca.spottedleaf.moonrise.patches.chunk_system.io.MoonriseRegionFileIO.RegionDataController entityDataController; // Archipelago - storage API; can be another controller
++    private final ca.spottedleaf.moonrise.patches.chunk_system.io.MoonriseRegionFileIO.RegionDataController poiDataController; // Archipelago - storage API; can be another controller
++    private final ca.spottedleaf.moonrise.patches.chunk_system.io.MoonriseRegionFileIO.RegionDataController chunkDataController; // Archipelago - storage API; can be another controller
+     private final ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkTaskScheduler chunkTaskScheduler;
+     private long lastMidTickFailure;
+     private long tickedBlocksOrFluids;
+@@ -609,6 +_,8 @@
+     }
+     // Paper end - chunk tick iteration
+ 
++    public final sh.btx.archipelago.storage.@Nullable StoredWorld storedWorld; // Archipelago - storage API
++
+     public ServerLevel(
+         final MinecraftServer server,
+         final Executor executor,
+@@ -629,6 +_,7 @@
+         io.papermc.paper.world.PaperWorldLoader.LoadedWorldData loadedWorldData
+         // Paper end - add parameters
+     ) {
++        this.storedWorld = sh.btx.archipelago.storage.StorageHooks.world(dimension); // Archipelago - storage API; before super, which uses it
+         // CraftBukkit start
+         final io.papermc.paper.world.saveddata.PaperLevelOverrides levelData = loadedWorldData.levelOverrides();
+         savedDataStorage.set(io.papermc.paper.world.saveddata.PaperLevelOverrides.TYPE, levelData);
+@@ -732,16 +_,16 @@
+         // Paper start - rewrite chunk system
+         this.moonrise$setEntityLookup(new ca.spottedleaf.moonrise.patches.chunk_system.level.entity.server.ServerEntityLookup((ServerLevel)(Object)this, ((ServerLevel)(Object)this).new EntityCallbacks()));
+         this.chunkTaskScheduler = new ca.spottedleaf.moonrise.patches.chunk_system.scheduling.ChunkTaskScheduler((ServerLevel)(Object)this);
+-        this.entityDataController = new ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.EntityDataController(
++        this.entityDataController = sh.btx.archipelago.storage.StorageHooks.controller(this.storedWorld, new ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.EntityDataController( // Archipelago - storage API
+             new ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.EntityDataController.EntityRegionFileStorage(
+                 new RegionStorageInfo(levelStorage.getLevelId(), dimension, "entities"),
+                 levelStorage.getDimensionPath(dimension).resolve("entities"),
+                 server.forceSynchronousWrites()
+             ),
+             this.chunkTaskScheduler
+-        );
+-        this.poiDataController = new ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.PoiDataController((ServerLevel)(Object)this, this.chunkTaskScheduler);
+-        this.chunkDataController = new ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.ChunkDataController((ServerLevel)(Object)this, this.chunkTaskScheduler);
++        ), this.chunkTaskScheduler); // Archipelago - storage API
++        this.poiDataController = sh.btx.archipelago.storage.StorageHooks.controller(this.storedWorld, new ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.PoiDataController((ServerLevel)(Object)this, this.chunkTaskScheduler), this.chunkTaskScheduler); // Archipelago - storage API
++        this.chunkDataController = sh.btx.archipelago.storage.StorageHooks.controller(this.storedWorld, new ca.spottedleaf.moonrise.patches.chunk_system.io.datacontroller.ChunkDataController((ServerLevel)(Object)this, this.chunkTaskScheduler), this.chunkTaskScheduler); // Archipelago - storage API
+         // Paper end - rewrite chunk system
+         this.getCraftServer().addWorld(this.getWorld()); // CraftBukkit
+     }
+@@ -1487,6 +_,7 @@
+     }
+     public void save(final @Nullable ProgressListener progressListener, final boolean flush, final boolean noSave, final boolean close) {
+         // Paper end - add close param
++        if (this.storedWorld != null && !this.storedWorld.canSave()) return; // Archipelago - storage API; closing, its IO halts and flushing would never finish
+         ServerChunkCache chunkSource = this.getChunkSource();
+         if (!noSave) {
+             new org.bukkit.event.world.WorldSaveEvent(this.getWorld()).callEvent(); // CraftBukkit
+@@ -1494,12 +_,13 @@
+                 progressListener.progressStartNoAbort(Component.translatable("menu.savingLevel"));
+             }
+ 
++            if (this.storedWorld != null && this.storedWorld.isClosing()) return; // Archipelago - storage API; a listener of the event unloaded it
+             this.saveLevelData(flush);
+             if (progressListener != null) {
+                 progressListener.progressStage(Component.translatable("menu.savingChunks"));
+             }
+ 
+-            if (!close) { chunkSource.save(flush); } // Paper - add close param
++            if (!close) { if (this.storedWorld != null) this.storedWorld.saveChunks(flush, () -> chunkSource.save(flush)); else chunkSource.save(flush); } // Paper - add close param // Archipelago - storage API; commits once flushed. Closing commits in ServerChunkCache
+             // Paper - rewrite chunk system
+         }
+         // Paper start - add close param
+@@ -2574,6 +_,8 @@
+ 
+     @Override
+     public @Nullable MapItemSavedData getMapData(final MapId id) {
++        final sh.btx.archipelago.storage.StoredMaps storedMaps = sh.btx.archipelago.storage.StorageHooks.maps(); // Archipelago - storage API
++        if (storedMaps != null) return storedMaps.get(id); // Archipelago - storage API
+         // Paper start - Call missing map initialize event and set id
+         final SavedDataStorage storage = this.getServer().getDataStorage();
+ 
+@@ -2604,10 +_,19 @@
+         org.bukkit.event.server.MapInitializeEvent event = new org.bukkit.event.server.MapInitializeEvent(data.mapView);
+         event.callEvent();
+         // CraftBukkit end
++        // Archipelago start - storage API
++        final sh.btx.archipelago.storage.StoredMaps storedMaps = sh.btx.archipelago.storage.StorageHooks.maps();
++        if (storedMaps != null) {
++            storedMaps.set(id, data);
++            return;
++        }
++        // Archipelago end - storage API
+         this.getServer().getDataStorage().set(MapItemSavedData.type(id), data);
+     }
+ 
+     public MapId getFreeMapId() {
++        final sh.btx.archipelago.storage.StoredMaps storedMaps = sh.btx.archipelago.storage.StorageHooks.maps(); // Archipelago - storage API
++        if (storedMaps != null) return storedMaps.nextId(); // Archipelago - storage API; unique across servers that share it
+         return this.getServer().getDataStorage().computeIfAbsent(MapIndex.TYPE).getNextMapId();
+     }
+ 

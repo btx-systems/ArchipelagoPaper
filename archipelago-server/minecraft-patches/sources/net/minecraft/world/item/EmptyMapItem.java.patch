@@ -1,0 +1,10 @@
+--- a/net/minecraft/world/item/EmptyMapItem.java
++++ b/net/minecraft/world/item/EmptyMapItem.java
+@@ -18,6 +_,7 @@
+     public InteractionResult use(final Level level, final Player player, final InteractionHand hand) {
+         ItemStack itemStack = player.getItemInHand(hand);
+         if (level instanceof ServerLevel serverLevel) {
++            if (!sh.btx.archipelago.storage.StorageHooks.canCreateMap()) return InteractionResult.FAIL; // Archipelago - storage API; before the empty map is used up
+             org.bukkit.inventory.ItemStack emptyMap = org.bukkit.craftbukkit.inventory.CraftItemStack.asBukkitCopy(itemStack); // Paper - PlayerMapFilledEvent
+             itemStack.consume(1, player);
+             player.awardStat(Stats.ITEM_USED.get(this));

@@ -1,0 +1,118 @@
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -936,6 +_,12 @@
+             throw new IllegalStateException(org.bukkit.command.defaults.ReloadCommand.RELOADING_DISABLED_MESSAGE);
+         }
+         // Paper end - lifecycle events
++        // Archipelago start - storage API
++        if (sh.btx.archipelago.storage.StorageHooks.inUse()) {
++            this.getLogger().warning("Not reloading plugins, as they provide storage that is in use. Restart instead, or first unload the worlds that were created with storage");
++            throw new IllegalStateException(org.bukkit.command.defaults.ReloadCommand.RELOADING_DISABLED_MESSAGE); // the only message /reload reports
++        }
++        // Archipelago end - storage API
+         org.spigotmc.WatchdogThread.hasStarted = false; // Paper - Disable watchdog early timeout on reload
+         this.reloadCount++;
+         this.configuration = YamlConfiguration.loadConfiguration(this.getConfigFile());
+@@ -1145,8 +_,21 @@
+         return "CraftServer{" + "serverName=" + this.serverName + ",serverVersion=" + this.serverVersion + ",minecraftVersion=" + this.console.getServerVersion() + '}';
+     }
+ 
++    // Archipelago start - storage API
+     @Override
+     public World createWorld(WorldCreator creator) {
++        final sh.btx.archipelago.storage.StorageHooks.Creation creation = new sh.btx.archipelago.storage.StorageHooks.Creation();
++        World created = null;
++        try {
++            created = this.createWorld0(creator, creation);
++            return created;
++        } finally {
++            creation.end(this, created); // closes the storage it opened if this failed
++        }
++    }
++
++    private World createWorld0(WorldCreator creator, sh.btx.archipelago.storage.StorageHooks.Creation creation) {
++    // Archipelago end - storage API
+         Preconditions.checkState(this.console.getAllLevels().iterator().hasNext(), "Cannot create additional worlds on STARTUP");
+         //Preconditions.checkState(!this.console.isIteratingOverLevels, "Cannot create a world while worlds are being ticked"); // Paper - Cat - Temp disable. We'll see how this goes.
+         Preconditions.checkArgument(creator != null, "WorldCreator cannot be null");
+@@ -1159,6 +_,7 @@
+         World worldByKey = this.getWorld(creator.key());
+         if (world != null || worldByKey != null) {
+             if (world == worldByKey) {
++                sh.btx.archipelago.storage.StorageHooks.checkExistingWorld(world, creator); // Archipelago - storage API
+                 return world;
+             }
+             throw new IllegalArgumentException("Cannot create a world with key " + creator.key() + " and name " + name + " one (or both) already match a world that exists");
+@@ -1186,6 +_,7 @@
+         if (configuredStem == null) {
+             throw new IllegalStateException("Missing configured level stem " + actualDimension);
+         }
++        creation.open(dimensionKey, creator); // Archipelago - storage API; before anything of the world is read
+         try {
+             WorldFolderMigration.migrateApiWorld(
+                 this.console.storageSource,
+@@ -1258,7 +_,7 @@
+             biomeProvider = chunkGenerator.getDefaultBiomeProvider(worldInfo);
+         }
+ 
+-        final SavedDataStorage savedDataStorage = new SavedDataStorage(this.console.storageSource.getDimensionPath(dimensionKey).resolve(LevelResource.DATA.id()), this.console.getFixerUpper(), registryAccess);
++        final SavedDataStorage savedDataStorage = sh.btx.archipelago.storage.StorageHooks.savedData(dimensionKey, this.console.storageSource.getDimensionPath(dimensionKey).resolve(LevelResource.DATA.id()), this.console.getFixerUpper(), registryAccess); // Archipelago - storage API
+         savedDataStorage.set(WorldGenSettings.TYPE, new WorldGenSettings(genSettingsFinal.options(), genSettingsFinal.dimensions()));
+         List<CustomSpawner> list = ImmutableList.of(
+             new PhantomSpawner(), new PatrolSpawner(), new CatSpawner(), new VillageSiege(), new WanderingTraderSpawner(savedDataStorage)
+@@ -1311,7 +_,7 @@
+ 
+         ServerLevel handle = ((CraftWorld) world).getHandle();
+ 
+-        if (this.console.getLevel(handle.dimension()) == null) {
++        if (this.console.getLevel(handle.dimension()) != handle) { // Archipelago - storage API; an old handle would remove the new world with its key
+             return false;
+         }
+ 
+@@ -1323,25 +_,32 @@
+             return false;
+         }
+ 
++        if (handle.storedWorld != null) handle.storedWorld.checkNotInCallback(); // Archipelago - storage API
+         WorldUnloadEvent event = new WorldUnloadEvent(handle.getWorld());
+         if (!event.callEvent()) {
+             return false;
+         }
++        if (this.console.getLevel(handle.dimension()) != handle) return false; // Archipelago - storage API; a listener unloaded it
+ 
+         try {
+             if (save) {
+                 handle.save(null, true, false); // Paper - Fix saving in unloadWorld
++                if (this.console.getLevel(handle.dimension()) != handle) return false; // Archipelago - storage API; a listener of the save unloaded it
++                if (!sh.btx.archipelago.storage.StorageHooks.checkpointed(handle)) return false; // Archipelago - storage API; stay loaded rather than lose changes
++                if (!sh.btx.archipelago.storage.StorageHooks.mapsSaved(handle)) return false; // Archipelago - storage API; the next server to load it reads them
+             }
+ 
+             handle.getChunkSource().close(save);
+             io.papermc.paper.FeatureHooks.closeEntityManager(handle, save); // SPIGOT-6722: close entityManager // Paper - chunk system
+         } catch (Exception ex) {
+             this.getLogger().log(Level.SEVERE, null, ex);
++            if (sh.btx.archipelago.storage.StorageHooks.isOpen(handle)) return false; // Archipelago - storage API; nothing was closed
+         }
+ 
++        if (this.console.getLevel(handle.dimension()) != handle) return false; // Archipelago - storage API; don't remove a replacement
+         this.worlds.remove(world.getName().toLowerCase(Locale.ROOT));
+         this.console.removeLevel(handle);
+-        return true;
++        return sh.btx.archipelago.storage.StorageHooks.closedCleanly(handle); // Archipelago - storage API
+     }
+ 
+     @Override
+@@ -2192,6 +_,12 @@
+ 
+     @Override
+     public OfflinePlayer[] getOfflinePlayers() {
++        // Archipelago start - storage API
++        final sh.btx.archipelago.storage.PlayerStorageBridge storedPlayers = sh.btx.archipelago.storage.StorageHooks.players();
++        if (storedPlayers != null) {
++            return storedPlayers.offlinePlayers(this);
++        }
++        // Archipelago end - storage API
+         PlayerDataStorage storage = this.console.getPlayerList().playerIo;
+         String[] files = storage.getPlayerDir().list((dir, name) -> name.endsWith(".dat"));
+         Set<OfflinePlayer> players = new HashSet<>();

@@ -11,7 +11,8 @@ plugins {
 
 rootProject.name = "archipelago"
 
-for (name in listOf("archipelago-api", "archipelago-server")) {
+// storage-test-plugin is not published, it tests the storage API
+for (name in listOf("archipelago-api", "archipelago-server", "storage-test-plugin")) {
     include(name)
     file(name).mkdirs()
 }

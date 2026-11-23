@@ -1,0 +1,61 @@
+--- a/net/minecraft/server/PlayerAdvancements.java
++++ b/net/minecraft/server/PlayerAdvancements.java
+@@ -62,6 +_,8 @@
+     private final Codec<PlayerAdvancements.Data> codec;
+     private final Map<CriterionTrigger<?>, Map<PlayerAdvancements.TriggerInstanceKey, ? extends CriterionTriggerInstance>> activeTriggers = new IdentityHashMap<>();
+ 
++    private @Nullable JsonElement reloadSnapshot; // Archipelago - storage API
++
+     public PlayerAdvancements(
+         final DataFixer dataFixer, final PlayerList playerList, final ServerAdvancementManager manager, final Path playerSavePath, final ServerPlayer player
+     ) {
+@@ -83,6 +_,11 @@
+     }
+ 
+     public void reload(final ServerAdvancementManager manager) {
++        // Archipelago start - storage API; reading again could fail, and the next save would then erase everything
++        if (sh.btx.archipelago.storage.StorageHooks.players() != null) {
++            this.reloadSnapshot = this.codec.encodeStart(JsonOps.INSTANCE, this.asData()).getOrThrow();
++        }
++        // Archipelago end - storage API; reading again could fail, and the next save would then erase everything
+         this.clearTriggers();
+         this.progress.clear();
+         this.visible.clear();
+@@ -92,6 +_,7 @@
+         this.lastSelectedTab = null;
+         this.tree = manager.tree();
+         this.load(manager);
++        this.reloadSnapshot = null; // Archipelago - storage API
+     }
+ 
+     private void registerListeners(final ServerAdvancementManager manager) {
+@@ -111,6 +_,15 @@
+     }
+ 
+     private void load(final ServerAdvancementManager manager) {
++        // Archipelago start - storage API
++        final sh.btx.archipelago.storage.PlayerStorageBridge storedPlayers = sh.btx.archipelago.storage.StorageHooks.players();
++        if (storedPlayers != null) {
++            final JsonElement stored = this.reloadSnapshot != null ? this.reloadSnapshot : storedPlayers.loadAdvancements(this.player.getUUID());
++            if (stored != null) {
++                this.applyFrom(manager, this.codec.parse(JsonOps.INSTANCE, stored).getOrThrow(JsonParseException::new)); // refuses the login if it fails
++            }
++        } else
++        // Archipelago end - storage API
+         if (Files.isRegularFile(this.playerSavePath)) {
+             try (Reader reader = Files.newBufferedReader(this.playerSavePath, StandardCharsets.UTF_8)) {
+                 JsonElement json = StrictJsonParser.parse(reader);
+@@ -130,6 +_,13 @@
+     public void save() {
+         if (org.spigotmc.SpigotConfig.disableAdvancementSaving) return; // Spigot
+         JsonElement json = this.codec.encodeStart(JsonOps.INSTANCE, this.asData()).getOrThrow();
++        // Archipelago start - storage API
++        final sh.btx.archipelago.storage.PlayerStorageBridge storedPlayers = sh.btx.archipelago.storage.StorageHooks.players();
++        if (storedPlayers != null) {
++            storedPlayers.saveAdvancements(this.player.getUUID(), json);
++            return;
++        }
++        // Archipelago end - storage API
+ 
+         try {
+             FileUtil.createDirectoriesSafe(this.playerSavePath.getParent());

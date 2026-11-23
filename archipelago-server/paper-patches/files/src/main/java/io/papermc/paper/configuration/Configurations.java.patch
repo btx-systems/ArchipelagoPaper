@@ -1,0 +1,29 @@
+--- a/src/main/java/io/papermc/paper/configuration/Configurations.java
++++ b/src/main/java/io/papermc/paper/configuration/Configurations.java
+@@ -217,16 +_,22 @@
+         boolean newFile = false;
+         final Path dir = contextMap.require(WORLD_DIRECTORY);
+         final Path worldConfigFile = dir.resolve(this.worldConfigFileName);
+-        if (Files.notExists(worldConfigFile)) {
++        final sh.btx.archipelago.storage.StoredWorld configStorage = sh.btx.archipelago.storage.StorageHooks.configStorage(contextMap.require(WORLD_KEY), worldConfigFile); // Archipelago - storage API
++        if (configStorage == null && Files.notExists(worldConfigFile)) { // Archipelago - storage API
+             PaperConfigurations.createDirectoriesSymlinkAware(dir);
+             Files.createFile(worldConfigFile); // create empty file as template
+             newFile = true;
+         }
+ 
+-        final YamlConfigurationLoader worldLoader = this.createWorldConfigLoaderBuilder(contextMap)
++        // Archipelago start - storage API
++        final YamlConfigurationLoader.Builder worldLoaderBuilder = this.createWorldConfigLoaderBuilder(contextMap)
+             .defaultOptions(this.applyObjectMapperFactory(this.createWorldObjectMapperFactoryBuilder(contextMap).build()))
+-            .path(worldConfigFile)
+-            .build();
++            .path(worldConfigFile);
++        if (configStorage != null) {
++            newFile = sh.btx.archipelago.storage.StorageWorldConfig.redirect(worldLoaderBuilder, configStorage);
++        }
++        final YamlConfigurationLoader worldLoader = worldLoaderBuilder.build();
++        // Archipelago end - storage API
+         final ConfigurationNode worldNode = worldLoader.load();
+         if (newFile) { // set the version field if new file
+             worldNode.node(Configuration.VERSION_FIELD).set(this.worldConfigVersion());

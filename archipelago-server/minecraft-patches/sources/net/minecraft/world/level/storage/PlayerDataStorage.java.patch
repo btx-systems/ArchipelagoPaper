@@ -1,0 +1,11 @@
+--- a/net/minecraft/world/level/storage/PlayerDataStorage.java
++++ b/net/minecraft/world/level/storage/PlayerDataStorage.java
+@@ -27,7 +_,7 @@
+     public PlayerDataStorage(final LevelStorageSource.LevelStorageAccess levelAccess, final DataFixer fixerUpper) {
+         this.fixerUpper = fixerUpper;
+         this.playerDir = levelAccess.getLevelPath(LevelResource.PLAYER_DATA_DIR).toFile();
+-        this.playerDir.mkdirs();
++        if (sh.btx.archipelago.storage.StorageHooks.players() == null) this.playerDir.mkdirs(); // Archipelago - storage API
+     }
+ 
+     public void save(final Player player) {
