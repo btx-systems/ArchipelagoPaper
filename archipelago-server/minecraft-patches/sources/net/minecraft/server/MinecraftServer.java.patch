@@ -9,11 +9,12 @@
          savedDataStorage.set(WorldGenSettings.TYPE, new WorldGenSettings(worldDataAndGenSettings.genSettings().options(), worldDataAndGenSettings.genSettings().dimensions()));
          long seed = worldOptions.seed();
          long biomeZoomSeed = BiomeManager.obfuscateSeed(seed);
-@@ -949,6 +_,7 @@
+@@ -949,6 +_,8 @@
      public void saveGlobalData(final boolean flush) {
          this.scoreboard.storeToSaveDataIfDirty(this.getDataStorage().computeIfAbsent(ScoreboardSaveData.TYPE));
          // Paper end - split out global level data
 +        sh.btx.archipelago.storage.StorageHooks.retryPlayerSaves(); // Archipelago - storage API
++        sh.btx.archipelago.storage.StorageHooks.saveMaps(flush); // Archipelago - storage API
          GameProfile singleplayerProfile = this.getSingleplayerProfile();
          this.storageSource.saveDataTag(this.worldData, singleplayerProfile == null ? null : singleplayerProfile.id());
          if (flush) {
@@ -38,3 +39,11 @@
  
              while (this.running) {
                  final long tickStart = System.nanoTime(); // Paper - improve tick loop
+@@ -1899,6 +_,7 @@
+         Map<ResourceKey<Level>, ServerLevel> newLevels = Maps.newLinkedHashMap(oldLevels);
+         newLevels.put(level.dimension(), level);
+         this.levels = Collections.unmodifiableMap(newLevels);
++        sh.btx.archipelago.storage.StorageHooks.worldLoaded(level); // Archipelago - storage API; it may come from another server, with newer maps
+     }
+ 
+     public void removeLevel(ServerLevel level) {

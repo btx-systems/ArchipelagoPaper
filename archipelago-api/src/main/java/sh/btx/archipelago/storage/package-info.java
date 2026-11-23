@@ -1,15 +1,16 @@
 /**
  * API for replacing the server's built-in storage.
  * <p>
- * There are three things that can be stored by a plugin:
+ * There are four things that can be stored by a plugin:
  * <ul>
  *     <li><b>Worlds created by plugins</b>, with
  *     {@link org.bukkit.WorldCreator#storage(sh.btx.archipelago.storage.WorldStorage)}. Any plugin can do this.</li>
  *     <li><b>Default worlds</b> (the overworld, nether, end and dimensions from datapacks), with a
  *     {@link sh.btx.archipelago.storage.WorldStorageProvider}.</li>
  *     <li><b>Player data, statistics and advancements</b>, with a {@link sh.btx.archipelago.storage.PlayerStorage}.</li>
+ *     <li><b>Maps</b>, with a {@link sh.btx.archipelago.storage.MapStorage}.</li>
  * </ul>
- * The last two are read before plugins are loaded, so they are registered from a bootstrapper, which needs a
+ * The last three are read before plugins are loaded, so they are registered from a bootstrapper, which needs a
  * {@code paper-plugin.yml}:
  * <pre>{@code
  * public final class MyBootstrap implements PluginBootstrap {
@@ -18,13 +19,15 @@
  *         context.getLifecycleManager().registerEventHandler(LifecycleEvents.STORAGE, event -> {
  *             event.registrar().worlds(key -> new MyWorldStorage(key));
  *             event.registrar().players(new MyPlayerStorage());
+ *             event.registrar().maps(new MyMapStorage());
  *         });
  *     }
  * }
  * }</pre>
  * <p>
  * Data that belongs to the server as a whole stays in the level folder: {@code level.dat}, the scoreboard, command
- * storage, maps, saved structures and {@code session.lock}.
+ * storage, saved structures and {@code session.lock}. So do maps when no {@link sh.btx.archipelago.storage.MapStorage}
+ * is registered.
  *
  * <h2>Rules for every implementation</h2>
  * <ul>

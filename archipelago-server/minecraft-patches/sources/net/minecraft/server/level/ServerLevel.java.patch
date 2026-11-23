@@ -74,3 +74,32 @@
              // Paper - rewrite chunk system
          }
          // Paper start - add close param
+@@ -2574,6 +_,8 @@
+ 
+     @Override
+     public @Nullable MapItemSavedData getMapData(final MapId id) {
++        final sh.btx.archipelago.storage.StoredMaps storedMaps = sh.btx.archipelago.storage.StorageHooks.maps(); // Archipelago - storage API
++        if (storedMaps != null) return storedMaps.get(id); // Archipelago - storage API
+         // Paper start - Call missing map initialize event and set id
+         final SavedDataStorage storage = this.getServer().getDataStorage();
+ 
+@@ -2604,10 +_,19 @@
+         org.bukkit.event.server.MapInitializeEvent event = new org.bukkit.event.server.MapInitializeEvent(data.mapView);
+         event.callEvent();
+         // CraftBukkit end
++        // Archipelago start - storage API
++        final sh.btx.archipelago.storage.StoredMaps storedMaps = sh.btx.archipelago.storage.StorageHooks.maps();
++        if (storedMaps != null) {
++            storedMaps.set(id, data);
++            return;
++        }
++        // Archipelago end - storage API
+         this.getServer().getDataStorage().set(MapItemSavedData.type(id), data);
+     }
+ 
+     public MapId getFreeMapId() {
++        final sh.btx.archipelago.storage.StoredMaps storedMaps = sh.btx.archipelago.storage.StorageHooks.maps(); // Archipelago - storage API
++        if (storedMaps != null) return storedMaps.nextId(); // Archipelago - storage API; unique across servers that share it
+         return this.getServer().getDataStorage().computeIfAbsent(MapIndex.TYPE).getNextMapId();
+     }
+ 

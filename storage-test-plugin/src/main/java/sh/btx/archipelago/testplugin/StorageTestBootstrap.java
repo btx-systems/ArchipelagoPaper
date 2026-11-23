@@ -10,6 +10,9 @@ import java.util.Set;
  * <ul>
  *     <li>{@code -Darchipelago.storageTest.worlds=overworld,the_nether,the_end} stores those default worlds</li>
  *     <li>{@code -Darchipelago.storageTest.players=true} stores players</li>
+ *     <li>{@code -Darchipelago.storageTest.maps=true} stores maps</li>
+ *     <li>{@code -Darchipelago.storageTest.shared=/some/folder} keeps islands, players and maps there, for servers
+ *     that share them</li>
  *     <li>{@code -Darchipelago.storageTest.faults=open:io:1,save:delay:3} makes calls fail</li>
  * </ul>
  */
@@ -28,7 +31,8 @@ public final class StorageTestBootstrap implements PluginBootstrap {
 
         final String worldList = System.getProperty(StorageTest.PROPERTY + ".worlds", "");
         final boolean players = Boolean.getBoolean(StorageTest.PROPERTY + ".players");
-        if (worldList.isEmpty() && !players) {
+        final boolean maps = Boolean.getBoolean(StorageTest.PROPERTY + ".maps");
+        if (worldList.isEmpty() && !players && !maps) {
             return;
         }
         final Set<String> worlds = Set.of(worldList.split(","));
@@ -48,7 +52,10 @@ public final class StorageTestBootstrap implements PluginBootstrap {
                 });
             }
             if (players) {
-                event.registrar().players(new FilePlayerStorage(context.getDataDirectory().resolve("players")));
+                event.registrar().players(new FilePlayerStorage(StorageTest.shared().resolve("players")));
+            }
+            if (maps) {
+                event.registrar().maps(new FileMapStorage(StorageTest.mapsDirectory()));
             }
         });
     }

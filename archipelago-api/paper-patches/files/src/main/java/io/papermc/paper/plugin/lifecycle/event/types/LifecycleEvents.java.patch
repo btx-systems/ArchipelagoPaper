@@ -6,7 +6,7 @@
  
 +    // Archipelago start - storage API
 +    /**
-+     * This event is for replacing where the default worlds and players are stored. It is called once, before either is read.
++     * This event is for replacing where the default worlds, players and maps are stored. It is called once, before any of them is read.
 +     * You can register a handler for this event only in {@link io.papermc.paper.plugin.bootstrap.PluginBootstrap#bootstrap(BootstrapContext)}.
 +     * @see sh.btx.archipelago.storage.StorageRegistrar
 +     */

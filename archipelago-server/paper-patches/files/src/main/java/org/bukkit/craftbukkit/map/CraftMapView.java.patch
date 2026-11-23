@@ -1,0 +1,64 @@
+--- a/src/main/java/org/bukkit/craftbukkit/map/CraftMapView.java
++++ b/src/main/java/org/bukkit/craftbukkit/map/CraftMapView.java
+@@ -48,6 +_,7 @@
+     @Override
+     public void setScale(Scale scale) {
+         this.worldMap.scale = scale.getValue();
++        this.archipelago$changed(); // Archipelago - storage API
+     }
+ 
+     @Override
+@@ -69,6 +_,7 @@
+     public void setWorld(World world) {
+         this.worldMap.dimension = ((CraftWorld) world).getHandle().dimension();
+         this.worldMap.uniqueId = world.getUID();
++        this.archipelago$changed(); // Archipelago - storage API
+     }
+ 
+     @Override
+@@ -84,11 +_,13 @@
+     @Override
+     public void setCenterX(int x) {
+         this.worldMap.centerX = x;
++        this.archipelago$changed(); // Archipelago - storage API
+     }
+ 
+     @Override
+     public void setCenterZ(int z) {
+         this.worldMap.centerZ = z;
++        this.archipelago$changed(); // Archipelago - storage API
+     }
+ 
+     @Override
+@@ -183,6 +_,7 @@
+     @Override
+     public void setTrackingPosition(boolean trackingPosition) {
+         this.worldMap.trackingPosition = trackingPosition;
++        this.archipelago$changed(); // Archipelago - storage API
+     }
+ 
+     @Override
+@@ -193,6 +_,7 @@
+     @Override
+     public void setUnlimitedTracking(boolean unlimited) {
+         this.worldMap.unlimitedTracking = unlimited;
++        this.archipelago$changed(); // Archipelago - storage API
+     }
+ 
+     @Override
+@@ -203,5 +_,14 @@
+     @Override
+     public void setLocked(boolean locked) {
+         this.worldMap.locked = locked;
+-    }
++        this.archipelago$changed(); // Archipelago - storage API
++    }
++
++    // Archipelago start - storage API
++    private void archipelago$changed() {
++        if (sh.btx.archipelago.storage.StorageHooks.maps() != null) {
++            this.worldMap.setDirty(); // otherwise only saved if it changes in another way, which a world moving to another server loses
++        }
++    }
++    // Archipelago end - storage API
+ }

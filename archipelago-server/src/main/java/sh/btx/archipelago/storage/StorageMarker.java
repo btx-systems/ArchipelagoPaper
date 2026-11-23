@@ -20,6 +20,7 @@ final class StorageMarker {
 
     static final String FILE_NAME = "archipelago-storage.txt";
     static final String PLAYERS = "players";
+    static final String MAPS = "maps";
     // one entry for all, there can be any number of short-lived ones
     static final String OTHER_WORLDS = "other-worlds";
 
@@ -55,6 +56,7 @@ final class StorageMarker {
     synchronized Set<String> worlds() {
         final Set<String> worlds = new TreeSet<>(this.entries);
         worlds.remove(PLAYERS);
+        worlds.remove(MAPS);
         return Collections.unmodifiableSet(worlds);
     }
 

@@ -4,6 +4,8 @@ import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.math.Position;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -28,8 +31,11 @@ import org.bukkit.block.Barrel;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.MapMeta;
+import org.bukkit.map.MapView;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
+import sh.btx.archipelago.storage.StoredData;
 import sh.btx.archipelago.storage.WorldStorage.ChunkDataType;
 
 /**
@@ -371,6 +377,62 @@ final class TestCommand implements BasicCommand {
             case "offline-stat" -> {
                 Bukkit.getOfflinePlayer(UUID.fromString(name)).incrementStatistic(Statistic.ANIMALS_BRED, Integer.parseInt(args[2]));
                 return "";
+            }
+            case "map-create" -> { // on the island's spawn
+                return "id=" + Bukkit.createMap(world(name)).getId();
+            }
+            case "map-get" -> {
+                final MapView map = Bukkit.getMap(Integer.parseInt(name));
+                if (map == null) {
+                    return "found=false";
+                }
+                return "found=true center=" + map.getCenterX() + "," + map.getCenterZ() + " scale=" + map.getScale()
+                    + " locked=" + map.isLocked() + " world=" + (map.getWorld() == null ? "none" : map.getWorld().key().asString())
+                    + " object=" + System.identityHashCode(map);
+            }
+            case "map-center" -> {
+                final MapView map = Objects.requireNonNull(Bukkit.getMap(Integer.parseInt(name)), "no map " + name);
+                map.setCenterX(Integer.parseInt(args[2]));
+                return "";
+            }
+            case "map-stored" -> { // what the storage has, which no server reads back
+                final Path file = FileMapStorage.file(StorageTest.mapsDirectory(), Integer.parseInt(name));
+                if (!Files.exists(file)) {
+                    return "stored=false";
+                }
+                final CompoundBinaryTag data = StoredData.copyOf(Files.readAllBytes(file)).toCompound().getCompound("data");
+                int painted = 0;
+                for (final byte color : data.getByteArray("colors")) {
+                    if (color != 0) {
+                        painted++;
+                    }
+                }
+                return "stored=true dimension=" + data.getString("dimension") + " center=" + data.getInt("xCenter") + "," + data.getInt("zCenter")
+                    + " painted=" + painted + " banners=" + data.getList("banners").size();
+            }
+            case "map-paint-stored" -> { // as if another server had changed it
+                final Path file = FileMapStorage.file(StorageTest.mapsDirectory(), Integer.parseInt(name));
+                final CompoundBinaryTag map = StoredData.copyOf(Files.readAllBytes(file)).toCompound();
+                final byte[] colors = new byte[128 * 128];
+                Arrays.fill(colors, 0, Integer.parseInt(args[2]), (byte) 34);
+                Files.write(file, StoredData.of(map.put("data", map.getCompound("data").putByteArray("colors", colors))).bytes());
+                return "";
+            }
+            case "map-give" -> { // in the player's hand, where vanilla draws the map
+                final Player player = Objects.requireNonNull(Bukkit.getPlayerExact(name), "not online");
+                final ItemStack item = ItemStack.of(Material.FILLED_MAP);
+                item.editMeta(MapMeta.class, meta -> meta.setMapView(Objects.requireNonNull(Bukkit.getMap(Integer.parseInt(args[2])), "no map")));
+                player.getInventory().setItemInMainHand(item);
+                return "";
+            }
+            case "map-held" -> {
+                final Player player = Objects.requireNonNull(Bukkit.getPlayerExact(name), "not online");
+                final ItemStack item = player.getInventory().getItemInMainHand();
+                return "id=" + (item.getItemMeta() instanceof final MapMeta meta && meta.hasMapView() ? Objects.requireNonNull(meta.getMapView()).getId() : -1);
+            }
+            case "goto" -> {
+                final Player player = Objects.requireNonNull(Bukkit.getPlayerExact(name), "not online");
+                return "teleported=" + player.teleport(new Location(world(args[2]), 0.5, FLOOR + 1, 0.5));
             }
             default -> throw new IllegalArgumentException("unknown " + args[0]);
         }

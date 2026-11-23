@@ -54,6 +54,7 @@ public final class StorageHooks {
     private static final Map<ResourceKey<Level>, StoredWorld> WORLDS = new ConcurrentHashMap<>();
     private static volatile @Nullable WorldStorageProvider provider;
     private static volatile @Nullable PlayerStorageBridge players;
+    private static volatile @Nullable StoredMaps maps;
     private static @Nullable StorageMarker marker;
     private static volatile boolean used; // unlike inUse, stays true
 
@@ -78,6 +79,11 @@ public final class StorageHooks {
                 players = new PlayerStorageBridge(registered);
                 used = true;
                 LOGGER.info("{} provides player storage", plugin);
+            },
+            (registered, plugin) -> {
+                maps = StoredMaps.forServer(registered);
+                used = true;
+                LOGGER.info("{} provides map storage", plugin);
             }
         ), BootstrapContext.class);
 
@@ -85,6 +91,11 @@ public final class StorageHooks {
             marker.add(StorageMarker.PLAYERS);
         } else if (marker.contains(StorageMarker.PLAYERS)) {
             throw missing(marker, "players");
+        }
+        if (maps != null) {
+            marker.add(StorageMarker.MAPS);
+        } else if (marker.contains(StorageMarker.MAPS)) {
+            throw missing(marker, "maps");
         }
         if (provider == null && !marker.worlds().isEmpty()) {
             throw missing(marker, "worlds " + marker.worlds());
@@ -391,13 +402,49 @@ public final class StorageHooks {
         }
     }
 
+    // maps
+
+    public static @Nullable StoredMaps maps() {
+        return maps;
+    }
+
+    /**
+     * Before the empty map is used up.
+     */
+    public static boolean canCreateMap() {
+        final StoredMaps maps = StorageHooks.maps;
+        return maps == null || maps.reserveId();
+    }
+
+    public static void saveMaps(final boolean flush) {
+        final StoredMaps maps = StorageHooks.maps;
+        if (maps != null) {
+            maps.save(flush);
+        }
+    }
+
+    public static void worldLoaded(final ServerLevel level) {
+        final StoredMaps maps = StorageHooks.maps;
+        if (maps != null) {
+            maps.worldLoaded(level.dimension());
+        }
+    }
+
+    /**
+     * @return false if the world must stay loaded, as the next server to load it would show its maps as they were
+     */
+    public static boolean mapsSaved(final ServerLevel level) {
+        final StoredMaps maps = StorageHooks.maps;
+        return maps == null || maps.saveWorld(level.dimension());
+    }
+
     // lifetime
 
     /**
      * Plugins are disabled before the last save, so their classes have to stay loadable.
      */
     public static boolean inUse() {
-        return provider != null || players != null || !WORLDS.isEmpty();
+        return provider != null || players != null || maps != null || !WORLDS.isEmpty();
     }
 
     /**
@@ -422,6 +469,10 @@ public final class StorageHooks {
         final PlayerStorageBridge players = StorageHooks.players;
         if (players != null) {
             players.close();
+        }
+        final StoredMaps maps = StorageHooks.maps;
+        if (maps != null) {
+            maps.close();
         }
     }
 }

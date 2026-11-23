@@ -1,0 +1,44 @@
+--- a/net/minecraft/world/level/saveddata/maps/MapItemSavedData.java
++++ b/net/minecraft/world/level/saveddata/maps/MapItemSavedData.java
+@@ -177,6 +_,41 @@
+         return new MapItemSavedData(0, 0, scale, false, false, isLocked, dimension);
+     }
+ 
++    // Archipelago start - storage API
++    /**
++     * Takes what another server saved, keeping this object, which plugins and players hold.
++     */
++    public void archipelago$replaceWith(final MapItemSavedData stored) {
++        for (final String key : List.copyOf(this.bannerMarkers.keySet())) {
++            this.removeDecoration(key);
++        }
++        this.bannerMarkers.clear();
++        for (final MapFrame frame : List.copyOf(this.frameMarkers.values())) {
++            this.removeDecoration(getFrameKey(frame.entityId()));
++        }
++        this.frameMarkers.clear();
++        this.centerX = stored.centerX;
++        this.centerZ = stored.centerZ;
++        this.dimension = stored.dimension;
++        this.trackingPosition = stored.trackingPosition;
++        this.unlimitedTracking = stored.unlimitedTracking;
++        this.scale = stored.scale;
++        this.locked = stored.locked;
++        System.arraycopy(stored.colors, 0, this.colors, 0, this.colors.length);
++        for (final MapBanner banner : stored.bannerMarkers.values()) {
++            this.bannerMarkers.put(banner.getId(), banner);
++            this.addDecoration(banner.getDecoration(), null, banner.getId(), banner.pos().getX(), banner.pos().getZ(), 180.0, banner.name().orElse(null));
++        }
++        for (final MapFrame frame : stored.frameMarkers.values()) {
++            this.frameMarkers.put(frame.getId(), frame);
++            this.addDecoration(MapDecorationTypes.FRAME, null, getFrameKey(frame.entityId()), frame.pos().getX(), frame.pos().getZ(), frame.rotation(), null);
++        }
++        this.setColorsDirty(0, 0, false); // all of it is sent again
++        this.setColorsDirty(127, 127, false);
++        this.setDirty(false);
++    }
++    // Archipelago end - storage API
++
+     public MapItemSavedData locked() {
+         MapItemSavedData result = new MapItemSavedData(
+             this.centerX, this.centerZ, this.scale, this.trackingPosition, this.unlimitedTracking, true, this.dimension

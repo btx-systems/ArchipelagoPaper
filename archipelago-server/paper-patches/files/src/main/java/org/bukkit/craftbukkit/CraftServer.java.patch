@@ -69,7 +69,7 @@
              return false;
          }
  
-@@ -1323,25 +_,31 @@
+@@ -1323,25 +_,32 @@
              return false;
          }
  
@@ -85,6 +85,7 @@
                  handle.save(null, true, false); // Paper - Fix saving in unloadWorld
 +                if (this.console.getLevel(handle.dimension()) != handle) return false; // Archipelago - storage API; a listener of the save unloaded it
 +                if (!sh.btx.archipelago.storage.StorageHooks.checkpointed(handle)) return false; // Archipelago - storage API; stay loaded rather than lose changes
++                if (!sh.btx.archipelago.storage.StorageHooks.mapsSaved(handle)) return false; // Archipelago - storage API; the next server to load it reads them
              }
  
              handle.getChunkSource().close(save);

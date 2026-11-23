@@ -12,14 +12,19 @@ final class PaperStorageRegistrar implements StorageRegistrar, PaperRegistrar<Bo
 
     private final BiConsumer<WorldStorageProvider, String> onWorlds;
     private final BiConsumer<PlayerStorage, String> onPlayers;
+    private final BiConsumer<MapStorage, String> onMaps;
     private @Nullable BootstrapContext owner;
     private @Nullable String worldsOwner;
     private @Nullable String playersOwner;
+    private @Nullable String mapsOwner;
     private boolean valid = true;
 
-    PaperStorageRegistrar(final BiConsumer<WorldStorageProvider, String> onWorlds, final BiConsumer<PlayerStorage, String> onPlayers) {
+    PaperStorageRegistrar(
+        final BiConsumer<WorldStorageProvider, String> onWorlds, final BiConsumer<PlayerStorage, String> onPlayers, final BiConsumer<MapStorage, String> onMaps
+    ) {
         this.onWorlds = onWorlds;
         this.onPlayers = onPlayers;
+        this.onMaps = onMaps;
     }
 
     @Override
@@ -53,5 +58,14 @@ final class PaperStorageRegistrar implements StorageRegistrar, PaperRegistrar<Bo
         Preconditions.checkState(this.playersOwner == null, "%s cannot provide player storage, %s already does", plugin, this.playersOwner);
         this.playersOwner = plugin;
         this.onPlayers.accept(storage, plugin);
+    }
+
+    @Override
+    public void maps(final MapStorage storage) {
+        Preconditions.checkArgument(storage != null, "storage cannot be null");
+        final String plugin = this.currentOwner();
+        Preconditions.checkState(this.mapsOwner == null, "%s cannot provide map storage, %s already does", plugin, this.mapsOwner);
+        this.mapsOwner = plugin;
+        this.onMaps.accept(storage, plugin);
     }
 }

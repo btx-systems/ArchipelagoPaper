@@ -73,7 +73,7 @@ class StorageFilesTest {
 
     @Test
     void onlyOneProviderOfEach() {
-        final PaperStorageRegistrar registrar = new PaperStorageRegistrar((provider, plugin) -> {}, (players, plugin) -> {});
+        final PaperStorageRegistrar registrar = new PaperStorageRegistrar((provider, plugin) -> {}, (players, plugin) -> {}, (maps, plugin) -> {});
         assertThrows(IllegalStateException.class, () -> registrar.worlds(key -> null)); // outside of the event
 
         final BootstrapContext owner = Mockito.mock(BootstrapContext.class, Mockito.withSettings().defaultAnswer(Answers.RETURNS_DEEP_STUBS));
@@ -81,6 +81,8 @@ class StorageFilesTest {
         registrar.setCurrentContext(owner);
         registrar.worlds(key -> null);
         assertThrows(IllegalStateException.class, () -> registrar.worlds(key -> null));
+        registrar.maps(Mockito.mock(MapStorage.class));
+        assertThrows(IllegalStateException.class, () -> registrar.maps(Mockito.mock(MapStorage.class)));
 
         registrar.invalidate();
         assertThrows(IllegalStateException.class, () -> registrar.players(Mockito.mock(PlayerStorage.class)));

@@ -5,7 +5,7 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.NullMarked;
 
 /**
- * Registers storage for default worlds and players.
+ * Registers storage for default worlds, players and maps.
  *
  * @see io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents#STORAGE
  */
@@ -29,4 +29,12 @@ public interface StorageRegistrar extends Registrar {
      * @throws IllegalStateException if a plugin has already set one
      */
     void players(PlayerStorage storage);
+
+    /**
+     * Sets the storage for maps.
+     *
+     * @param storage the storage
+     * @throws IllegalStateException if a plugin has already set one
+     */
+    void maps(MapStorage storage);
 }
