@@ -1,0 +1,57 @@
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/NewChunkHolder.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/NewChunkHolder.java
+@@ -107,7 +_,7 @@
+ 
+             if (!transientChunk) {
+                 this.pendingEntityChunk = null;
+-                entityChunk = pendingEntityChunk == EMPTY_ENTITY_CHUNK ? null : pendingEntityChunk;
++                entityChunk = pendingEntityChunk == EMPTY_ENTITY_CHUNK || sh.btx.archipelago.storage.StorageHooks.hidesEntities(this.world, this.chunkX, this.chunkZ) ? null : pendingEntityChunk; // Archipelago - storage API
+             } else {
+                 entityChunk = null;
+             }
+@@ -1764,6 +_,7 @@
+             }
+         } catch (final Throwable thr) {
+             LOGGER.error("Failed to save chunk data (" + this.chunkX + "," + this.chunkZ + ") in world '" + WorldUtil.getWorldName(this.world) + "'", thr);
++            sh.btx.archipelago.storage.StorageHooks.notSerialized(this.world, MoonriseRegionFileIO.RegionFileType.CHUNK_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
+         }
+ 
+         return true;
+@@ -1783,15 +_,18 @@
+                     // we have no entities to add to the existing chunk
+                     return false;
+                 }
++                final boolean mergeIntoNothing = sh.btx.archipelago.storage.StorageHooks.mergesIntoNothing(this.world, this.chunkX, this.chunkZ); // Archipelago - storage API; must not bring back hidden entities
+                 final Completable<CompoundTag> mergeFrom = MoonriseRegionFileIO.loadDataAsync(
+                     this.world, this.chunkX, this.chunkZ, MoonriseRegionFileIO.RegionFileType.ENTITY_DATA, false, Priority.NORMAL
+                 );
+ 
+                 final Completable<CompoundTag> toWrite = mergeFrom.handle((final CompoundTag onDisk, final Throwable thr) -> {
+-                    if (thr != null) {
++                    if (thr != null && !mergeIntoNothing) { // Archipelago - storage API
+                         LOGGER.error("Cannot merge transient entities for chunk (" + NewChunkHolder.this.chunkX + "," + NewChunkHolder.this.chunkZ + ") in world '" + WorldUtil.getWorldName(NewChunkHolder.this.world) + "', data on disk will be replaced", thr);
++                        sh.btx.archipelago.storage.StorageHooks.retainEntities(NewChunkHolder.this.world, NewChunkHolder.this.chunkX, NewChunkHolder.this.chunkZ, save, thr); // Archipelago - storage API; throws to cancel the write, they are merged later
+                         return save;
+                     } else {
++                        if (!mergeIntoNothing) // Archipelago - storage API
+                         ChunkEntitySlices.copyEntities(onDisk, save);
+                         return save;
+                     }
+@@ -1820,6 +_,8 @@
+             }
+         } catch (final Throwable thr) {
+             LOGGER.error("Failed to save entity data (" + this.chunkX + "," + this.chunkZ + ") in world '" + WorldUtil.getWorldName(this.world) + "'", thr);
++            sh.btx.archipelago.storage.StorageHooks.notSerialized(this.world, MoonriseRegionFileIO.RegionFileType.ENTITY_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
++            if (this.world.storedWorld != null) this.lastEntitySaveNull = false; // Archipelago - storage API; or an empty one never gets written to clear that
+         }
+ 
+         return true;
+@@ -1841,6 +_,8 @@
+             }
+         } catch (final Throwable thr) {
+             LOGGER.error("Failed to save poi data (" + this.chunkX + "," + this.chunkZ + ") in world '" + WorldUtil.getWorldName(this.world) + "'", thr);
++            sh.btx.archipelago.storage.StorageHooks.notSerialized(this.world, MoonriseRegionFileIO.RegionFileType.POI_DATA, this.chunkX, this.chunkZ); // Archipelago - storage API
++            if (this.world.storedWorld != null) this.lastPoiSaveNull = false; // Archipelago - storage API; or an empty one never gets written to clear that
+         }
+ 
+         return true;

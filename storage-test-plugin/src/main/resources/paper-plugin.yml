@@ -1,0 +1,6 @@
+name: ArchipelagoStorageTest
+version: "${version}"
+main: sh.btx.archipelago.testplugin.StorageTestPlugin
+bootstrapper: sh.btx.archipelago.testplugin.StorageTestBootstrap
+description: Tests and demonstrates the storage API
+api-version: "${apiVersion}"

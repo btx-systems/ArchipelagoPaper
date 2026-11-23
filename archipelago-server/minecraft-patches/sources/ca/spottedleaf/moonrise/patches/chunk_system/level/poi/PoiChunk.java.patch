@@ -1,0 +1,10 @@
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/level/poi/PoiChunk.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/level/poi/PoiChunk.java
+@@ -181,6 +_,7 @@
+             final int finalSectionY = sectionY;
+             final PoiSection.Packed packed = deserializeResult.resultOrPartial((final String description) -> {
+                 LOGGER.error("Failed to deserialize poi chunk for world: " + WorldUtil.getWorldName(world) + ", chunk: (" + chunkX + "," + finalSectionY + "," + chunkZ + "); description: " + description);
++                sh.btx.archipelago.storage.StorageHooks.loadFailed(world, ca.spottedleaf.moonrise.patches.chunk_system.io.MoonriseRegionFileIO.RegionFileType.POI_DATA, chunkX, chunkZ); // Archipelago - storage API
+             }).orElse(null);
+ 
+             final long coordinateKey = CoordinateUtils.getChunkSectionKey(chunkX, sectionY, chunkZ);

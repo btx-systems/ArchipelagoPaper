@@ -1,0 +1,11 @@
+--- a/net/minecraft/server/network/config/PrepareSpawnTask.java
++++ b/net/minecraft/server/network/config/PrepareSpawnTask.java
+@@ -291,7 +_,7 @@
+                         org.bukkit.craftbukkit.entity.CraftPlayer craftPlayer = player.getBukkitEntity();
+                         // Only update first played if it is older than the one we have
+                         long modified = new java.io.File(PrepareSpawnTask.this.server.getPlayerList().playerIo.getPlayerDir(), player.getStringUUID() + ".dat").lastModified();
+-                        if (modified < craftPlayer.getFirstPlayed()) {
++                        if (sh.btx.archipelago.storage.StorageHooks.players() == null && modified < craftPlayer.getFirstPlayed()) { // Archipelago - storage API; no file, so it would be 0
+                             craftPlayer.setFirstPlayed(modified);
+                         }
+                         return tag;

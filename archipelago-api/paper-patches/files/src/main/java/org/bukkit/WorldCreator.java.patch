@@ -1,0 +1,50 @@
+--- a/src/main/java/org/bukkit/WorldCreator.java
++++ b/src/main/java/org/bukkit/WorldCreator.java
+@@ -30,6 +_,7 @@
+     private @Nullable Position spawnPositionOverride;
+     private @Nullable Float spawnYawOverride;
+     private @Nullable Float spawnPitchOverride;
++    private sh.btx.archipelago.storage.WorldStorage storage; // Archipelago - storage API
+ 
+     /**
+      * Creates an empty WorldCreationOptions for the given world name.
+@@ -591,6 +_,39 @@
+     public boolean bonusChest() {
+         return bonusChest;
+     }
++
++    // Archipelago start - storage API
++    /**
++     * Sets where the world is stored. Nothing is written to the world's folder when this is set.
++     * <p>
++     * The server closes the storage when the world is unloaded, or if creating it fails after it started to use
++     * the storage. It is not copied by {@link #copy(World)} or {@link #copy(WorldCreator)}, as each world needs
++     * its own.
++     * <p>
++     * The generator is not stored. Set it each time the world is loaded.
++     *
++     * @param storage the storage, or null to use the registered provider or the built-in storage
++     * @return This object, for chaining
++     */
++    @ApiStatus.Experimental
++    @NotNull
++    public WorldCreator storage(@Nullable sh.btx.archipelago.storage.WorldStorage storage) {
++        this.storage = storage;
++
++        return this;
++    }
++
++    /**
++     * Gets where the world is stored.
++     *
++     * @return the storage, or null if none was set
++     */
++    @ApiStatus.Experimental
++    @Nullable
++    public sh.btx.archipelago.storage.WorldStorage storage() {
++        return this.storage;
++    }
++    // Archipelago end - storage API
+ 
+     /**
+      * Creates a world with the specified options.

@@ -1,0 +1,32 @@
+--- a/net/minecraft/server/level/ServerChunkCache.java
++++ b/net/minecraft/server/level/ServerChunkCache.java
+@@ -205,7 +_,7 @@
+         Path dataFolder = levelStorage.getDimensionPath(level.dimension()).resolve("data");
+ 
+         try {
+-            FileUtil.createDirectoriesSafe(dataFolder);
++            if (level.storedWorld == null) FileUtil.createDirectoriesSafe(dataFolder); // Archipelago - storage API
+         } catch (IOException e) {
+             LOGGER.error("Failed to create dimension data storage directory", e);
+         }
+@@ -474,8 +_,20 @@
+     public void close(boolean save) throws IOException {
+         // Paper - rewrite chunk system
+         // CraftBukkit end
++        // Archipelago start - storage API; signals and the watchdog can stop the server while main is unloading
++        final sh.btx.archipelago.storage.StoredWorld storedWorld = this.level.storedWorld;
++        if (storedWorld != null && !storedWorld.beginClose()) return; // the chunk system is being halted, saving into it again would never finish
++        boolean written = false;
++        try {
++        // Archipelago end - storage API; signals and the watchdog can stop the server while main is unloading
+         this.savedDataStorage.close();
+         ((ca.spottedleaf.moonrise.patches.chunk_system.level.ChunkSystemServerLevel)this.level).moonrise$getChunkTaskScheduler().chunkHolderManager.close(save, true); // Paper - rewrite chunk system
++        // Archipelago start - storage API; last, once no chunk IO is left
++        written = true;
++        } finally {
++            if (storedWorld != null) storedWorld.close(save, written);
++        }
++        // Archipelago end - storage API; last, once no chunk IO is left
+     }
+ 
+     // CraftBukkit start - modelled on below

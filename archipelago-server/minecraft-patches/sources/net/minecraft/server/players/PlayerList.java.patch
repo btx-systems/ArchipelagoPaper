@@ -1,0 +1,13 @@
+--- a/net/minecraft/server/players/PlayerList.java
++++ b/net/minecraft/server/players/PlayerList.java
+@@ -1176,6 +_,10 @@
+         }
+     }
+     public ServerStatsCounter getPlayerStats(final GameProfile gameProfile) {
++            // Archipelago start - storage API
++            final ServerStatsCounter storedStats = sh.btx.archipelago.storage.StorageHooks.createStatsCounter(this.server, gameProfile.id());
++            if (storedStats != null) return storedStats;
++            // Archipelago end - storage API
+             Path targetFile = this.locateStatsFile(gameProfile);
+             return new ServerStatsCounter(this.server, targetFile);
+     }
